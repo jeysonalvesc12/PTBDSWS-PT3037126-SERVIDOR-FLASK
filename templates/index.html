@@ -1,11 +1,20 @@
 {% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
 
-{% block content %}
-<div class="container">
-    <div class="page-header">
-        <h1>Dados da última atualização:</h1>
-    </div>
-    <p>The local date and time is {{ moment(current_time).format('LLL') }}.</p>
-    <p>That was {{ moment(current_time).fromNow(refresh=True) }}.</p>
+{% block page_content %}
+<div class="page-header">
+    <h1>Olá, {% if name %}{{ name }}{% else %}Visitante{% endif %}!</h1>
 </div>
+
+<div class="row">
+    <div class="col-md-6">
+        <h3>Insira seu nome:</h3>
+        {{ wtf.quick_form(form) }}
+    </div>
+</div>
+
+<hr>
+<h3>Dados da última atualização:</h3>
+<p><strong>Data e hora local:</strong> {{ moment(current_time).format('LLL') }}.</p>
+<p><strong>Tempo decorrido:</strong> {{ moment(current_time).fromNow(refresh=True) }}.</p>
 {% endblock %}

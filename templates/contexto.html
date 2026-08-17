@@ -1,12 +1,10 @@
 {% extends "base.html" %}
 
-{% block content %}
-<div class="container">
-    <div class="page-header">
-        <h1>Olá, {{ nome }}!</h1>
-    </div>
-    <p style="font-size: 1.5em; color: #333;">Seu navegador é: {{ user_agent }}</p>
-    <p style="font-size: 1.5em; color: #333;">O IP do computador remoto é: {{ ip }}</p>
-    <p style="font-size: 1.5em; color: #333;">O host da aplicação é: {{ host }}</p>
+{% block page_content %}
+<div class="page-header">
+    <h1>Olá, {{ nome }}!</h1>
 </div>
+<p style="font-size: 1.5em; color: #333;">Seu navegador é: {{ user_agent }}</p>
+<p style="font-size: 1.5em; color: #333;">O IP do computador remoto é: {{ ip }}</p>
+<p style="font-size: 1.5em; color: #333;">O host da aplicação é: {{ host }}</p>
 {% endblock %}
