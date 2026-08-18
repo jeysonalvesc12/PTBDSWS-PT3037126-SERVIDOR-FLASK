@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1>Atualização de Cadastro</h1>
+    <p>Olá, {% if name %}{{ name }}{% else %}Visitante{% endif %}! Use o formulário abaixo para registrar ou atualizar o seu nome.</p>
+</div>
+
+<!-- Renderiza o formulário do WTForms -->
+{{ wtf.quick_form(form) }}
+{% endblock %}

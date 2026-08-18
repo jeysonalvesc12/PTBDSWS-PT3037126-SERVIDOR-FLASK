@@ -15,8 +15,10 @@
             <a class="navbar-brand" href="{{ url_for('index') }}">Avaliação contínua: <strong>Aula 050</strong></a>
         </div>
         <div class="navbar-collapse collapse">
-            <ul class="nav navbar-nav">
+           <ul class="nav navbar-nav">
                 <li><a href="{{ url_for('index') }}">Home</a></li>
+                <!-- Novo link para a página do formulário -->
+                <li><a href="{{ url_for('formulario') }}">Formulário</a></li>
                 <li><a href="{{ url_for('identificacao') }}">Identificação</a></li>
                 <li><a href="{{ url_for('contexto') }}">Contexto da requisição</a></li>
             </ul>
