@@ -56,16 +56,32 @@ def index():
     host = request.host
     return render_template('index.html', form=form, ip=ip, host=host, current_time=datetime.utcnow())
 
-# Nova Rota de Login
+# Rota de Login modificada
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
     
+    # Se o formulário for enviado e validado com sucesso...
     if form.validate_on_submit():
-        flash('Tentativa de login enviada com sucesso!')
-        return redirect(url_for('login'))
+        # Salva o usuário (e-mail) digitado na sessão[cite: 6]
+        session['usuario_login'] = form.usuario.data
+        
+        # Redireciona para a nova tela de "Dados do acesso" (Padrão PRG)[cite: 6]
+        return redirect(url_for('acesso'))
         
     return render_template('login.html', form=form, current_time=datetime.utcnow())
+
+# NOVA ROTA: Dados do Acesso (Tela solicitada na imagem)
+@app.route('/acesso')
+def acesso():
+    # Recupera o usuário salvo na sessão
+    usuario = session.get('usuario_login')
+    
+    # Se alguém tentar acessar essa página sem ter logado, redireciona de volta pro login
+    if not usuario:
+        return redirect(url_for('login'))
+        
+    return render_template('acesso.html', usuario=usuario, current_time=datetime.utcnow())
 
 if __name__ == '__main__':
     app.run(debug=True)
