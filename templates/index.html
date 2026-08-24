@@ -1,13 +1,26 @@
 {% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
 
 {% block page_content %}
-<div class="page-header">
-    <!-- Cumprimenta o nome salvo na sessão (se existir) ou 'Visitante' -->
-    <h1>Olá, {% if name %}{{ name }}{% else %}Visitante{% endif %}!</h1>
+<div class="page-header" style="border-bottom: none; padding-bottom: 0;">
+    {% if session.get('nome') %}
+        <h1>Olá, {{ session.get('nome') }} {{ session.get('sobrenome') }}!</h1>
+        <p style="font-size: 1.5em; margin-top: 15px;">A sua Instituição de ensino é {{ session.get('instituicao') }}</p>
+        <p style="font-size: 1.5em;">Está cursando a disciplina de {{ session.get('disciplina') }}</p>
+    {% else %}
+        <h1>Olá, Visitante!</h1>
+    {% endif %}
 </div>
 
-<div>
-    <h3>Dados da última atualização:</h3>
+<div style="margin-bottom: 20px;">
+    <p style="font-size: 1.2em; color: #333; margin-bottom: 2px;">O IP do computador remoto é: {{ ip }}</p>
+    <p style="font-size: 1.2em; color: #333;">O host da aplicação é: {{ host }}</p>
+</div>
+<hr>
+
+{{ wtf.quick_form(form) }}
+
+<div style="margin-top: 40px;">
     <p>The local date and time is {{ moment(current_time).format('LLL') }}.</p>
     <p>That was {{ moment(current_time).fromNow(refresh=True) }}.</p>
 </div>

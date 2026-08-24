@@ -3,7 +3,7 @@ from flask_bootstrap import Bootstrap
 from flask_moment import Moment
 from datetime import datetime
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField
+from wtforms import StringField, SubmitField, SelectField, PasswordField
 from wtforms.validators import DataRequired
 
 app = Flask(__name__)
@@ -12,12 +12,24 @@ app.config['SECRET_KEY'] = 'Chave forte'
 bootstrap = Bootstrap(app)
 moment = Moment(app)
 
-@app.context_processor
-def injetar_variaveis_globais():
-    return dict(meu_nome_fixo="Jason")
+# Formulário da Home (image_6a4d65.png e image_6a4d9c.png)
+class HomeForm(FlaskForm):
+    nome = StringField('Informe o seu nome', validators=[DataRequired()])
+    sobrenome = StringField('Informe o seu sobrenome:', validators=[DataRequired()])
+    instituicao = StringField('Informe a sua Instituição de ensino:', validators=[DataRequired()])
+    
+    # SelectField cria o menu suspenso (dropdown) com as opções de disciplinas
+    disciplina = SelectField('Informe a sua disciplina:', 
+                             choices=[('DSWA5', 'DSWA5'), 
+                                      ('DWBA4', 'DWBA4'), 
+                                      ('Gestão de projetos', 'Gestão de projetos')])
+    submit = SubmitField('Submit')
 
-class NameForm(FlaskForm):
-    name = StringField('Qual é o seu nome?', validators=[DataRequired()])
+# Formulário de Login (image_6a540c.png)
+class LoginForm(FlaskForm):
+    # render_kw adiciona o atributo placeholder no HTML, deixando o texto dentro do campo
+    usuario = StringField('', render_kw={"placeholder": "Usuário ou e-mail"}, validators=[DataRequired()])
+    senha = PasswordField('', render_kw={"placeholder": "Informe a sua senha"}, validators=[DataRequired()])
     submit = SubmitField('Enviar')
 
 @app.errorhandler(404)
@@ -28,39 +40,32 @@ def page_not_found(e):
 def internal_server_error(e):
     return render_template('500.html'), 500
 
-# Rota principal (Home) agora está limpa, apenas mostrando a hora e o nome da sessão
-@app.route('/')
+# Rota Principal (Home)
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    # Pegamos o 'name' da sessão caso o usuário já tenha preenchido o formulário
-    return render_template('index.html', name=session.get('name'), current_time=datetime.utcnow())
-
-# NOVA ROTA: Exclusiva para o formulário
-@app.route('/formulario', methods=['GET', 'POST'])
-def formulario():
-    form = NameForm()
+    form = HomeForm()
     
     if form.validate_on_submit():
-        old_name = session.get('name')
-        if old_name is not None and old_name != form.name.data:
-            flash('Parece que você alterou o seu nome!')
-            
-        session['name'] = form.name.data
+        session['nome'] = form.nome.data
+        session['sobrenome'] = form.sobrenome.data
+        session['instituicao'] = form.instituicao.data
+        session['disciplina'] = form.disciplina.data
+        return redirect(url_for('index'))
         
-        # Redireciona para a própria página de formulário após envio (Padrão PRG)
-        return redirect(url_for('formulario'))
-        
-    return render_template('formulario.html', form=form, name=session.get('name'))
-
-@app.route('/identificacao')
-def identificacao():
-    return render_template('identificacao.html')
-
-@app.route('/contexto')
-def contexto():
-    user_agent = request.headers.get('User-Agent')
     ip = request.remote_addr
     host = request.host
-    return render_template('contexto.html', user_agent=user_agent, ip=ip, host=host)
+    return render_template('index.html', form=form, ip=ip, host=host, current_time=datetime.utcnow())
+
+# Nova Rota de Login
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    form = LoginForm()
+    
+    if form.validate_on_submit():
+        flash('Tentativa de login enviada com sucesso!')
+        return redirect(url_for('login'))
+        
+    return render_template('login.html', form=form, current_time=datetime.utcnow())
 
 if __name__ == '__main__':
     app.run(debug=True)

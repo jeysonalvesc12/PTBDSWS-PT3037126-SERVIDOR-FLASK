@@ -1,6 +1,6 @@
 {% extends "bootstrap/base.html" %}
 
-{% block title %}Avaliação contínua: Aula 050{% endblock %}
+{% block title %}Avaliação contínua: Aula 050.B{% endblock %}
 
 {% block head %}
 {{ super() }}
@@ -12,15 +12,12 @@
 <div class="navbar navbar-inverse" role="navigation">
     <div class="container">
         <div class="navbar-header">
-            <a class="navbar-brand" href="{{ url_for('index') }}">Avaliação contínua: <strong>Aula 050</strong></a>
+            <a class="navbar-brand" href="{{ url_for('index') }}">Avaliação contínua: <strong>Aula 050.B</strong></a>
         </div>
         <div class="navbar-collapse collapse">
-           <ul class="nav navbar-nav">
+            <ul class="nav navbar-nav">
                 <li><a href="{{ url_for('index') }}">Home</a></li>
-                <!-- Novo link para a página do formulário -->
-                <li><a href="{{ url_for('formulario') }}">Formulário</a></li>
-                <li><a href="{{ url_for('identificacao') }}">Identificação</a></li>
-                <li><a href="{{ url_for('contexto') }}">Contexto da requisição</a></li>
+                <li><a href="{{ url_for('login') }}">Login</a></li>
             </ul>
         </div>
     </div>
@@ -30,7 +27,7 @@
 {% block content %}
 <div class="container">
     {% for message in get_flashed_messages() %}
-    <div class="alert alert-warning">
+    <div class="alert alert-info">
         <button type="button" class="close" data-dismiss="alert">&times;</button>
         {{ message }}
     </div>
