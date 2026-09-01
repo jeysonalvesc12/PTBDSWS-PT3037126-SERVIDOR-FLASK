@@ -5,6 +5,14 @@
 <div class="page-header" style="border-bottom: none; padding-bottom: 0;">
     {% if session.get('nome') %}
         <h1>Olá, {{ session.get('nome') }} {{ session.get('sobrenome') }}!</h1>
+        
+        <!-- Bloco que lê o banco de dados: Novo usuário vs Usuário recorrente -->
+        {% if not known %}
+            <p style="font-size: 1.2em; color: #555;">Pleased to meet you!</p>
+        {% else %}
+            <p style="font-size: 1.2em; color: #555;">Happy to see you again!</p>
+        {% endif %}
+        
         <p style="font-size: 1.5em; margin-top: 15px;">A sua Instituição de ensino é {{ session.get('instituicao') }}</p>
         <p style="font-size: 1.5em;">Está cursando a disciplina de {{ session.get('disciplina') }}</p>
     {% else %}
@@ -18,6 +26,7 @@
 </div>
 <hr>
 
+<!-- Renderiza o formulário que envia os dados para o banco -->
 {{ wtf.quick_form(form) }}
 
 <div style="margin-top: 40px;">
