@@ -62,7 +62,7 @@ def make_shell_context():
 
 class HomeForm(FlaskForm):
     nome = StringField('Informe o seu nome', validators=[DataRequired()])
-    sobrenome = StringField('Informe o seu sobrenome:', validators=[DataRequired()])
+   
     instituicao = StringField('Informe a sua Instituição de ensino:', validators=[DataRequired()])
     disciplina = SelectField('Informe a sua disciplina:', 
                              choices=[('DSWA5', 'DSWA5'), 
