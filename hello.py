@@ -85,35 +85,43 @@ def internal_server_error(e):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    form = HomeForm()
+    form = HomeForm() # ou NameForm, dependendo de como você nomeou a classe do formulário da Home
     
     if form.validate_on_submit():
-        # Consulta no banco de dados se o nome já existe[cite: 9]
+        # Consulta no banco de dados se o nome já existe
         user = User.query.filter_by(username=form.nome.data).first()
         
         if user is None: 
-            # Usuário NOVO: Salva no banco de dados e marca known como False[cite: 9]
-            user = User(username=form.nome.data)
+            # 1. Busca a função 'User' no banco de dados
+            user_role = Role.query.filter_by(name='User').first()
+            
+            # 2. Cria o novo usuário já associando-o à função encontrada[cite: 9]
+            user = User(username=form.nome.data, role=user_role)
             db.session.add(user)
             db.session.commit()
             session['known'] = False
         else:
-            # Usuário EXISTENTE: Apenas marca known como True
             session['known'] = True
             
-        # Continua salvando os dados do formulário na sessão do navegador
         session['nome'] = form.nome.data
-        session['sobrenome'] = form.sobrenome.data
-        session['instituicao'] = form.instituicao.data
-        session['disciplina'] = form.disciplina.data
-        
         return redirect(url_for('index'))
         
+    # 3. Consulta TODOS os usuários cadastrados no banco de dados[cite: 9]
+    lista_usuarios = User.query.all()
+    
     ip = request.remote_addr
     host = request.host
     
-    # ATENÇÃO AQUI: Agora estamos enviando a variável `known` para o HTML
-    return render_template('index.html', form=form, ip=ip, host=host, current_time=datetime.utcnow(), known=session.get('known', False))
+    # Enviamos a lista_usuarios para o template
+    return render_template('index.html', 
+                           form=form, 
+                           ip=ip, 
+                           host=host, 
+                           current_time=datetime.utcnow(), 
+                           known=session.get('known', False),
+                           users=lista_usuarios)
+        
+   
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
