@@ -46,7 +46,7 @@
             <tr>
                 <td>{{ u.username }}</td>
                 <!-- Verifica se o usuário tem uma função para evitar erros caso esteja vazio -->
-                <td>{{ u.role.name if u.role else 'Sem função definida' }}</td>
+               <td>{{ u.role.name if u.role else 'User' }}</td>
             </tr>
             {% endfor %}
         </tbody>
