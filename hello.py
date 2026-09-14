@@ -6,35 +6,28 @@ from datetime import datetime
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, SelectField, PasswordField
 from wtforms.validators import DataRequired
-# Importando as bibliotecas de banco de dados
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
-# Captura o diretório base do projeto para criar o banco na mesma pasta
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'Chave forte'
 
 # --- 1. CONFIGURAÇÃO DO BANCO DE DADOS ---
-
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'data.sqlite')
-# Desativa o rastreamento de modificações para economizar memória[cite: 9]
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Inicialização das extensões
 bootstrap = Bootstrap(app)
 moment = Moment(app)
-db = SQLAlchemy(app) # Inicializa o banco de dados
-migrate = Migrate(app, db) # Inicializa o gerenciador de migrações
+db = SQLAlchemy(app) 
+migrate = Migrate(app, db) 
 
-
-# --- 2. DEFINIÇÃO DOS MODELOS DE DADOS 
+# --- 2. DEFINIÇÃO DOS MODELOS DE DADOS ---
 class Role(db.Model):
     __tablename__ = 'roles'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
-    # Relacionamento: uma Role possui vários Users
     users = db.relationship('User', backref='role', lazy='dynamic')
 
     def __repr__(self):
@@ -44,78 +37,31 @@ class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, index=True)
-    # Chave estrangeira que conecta com a tabela Roles
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
 
     def __repr__(self):
         return '<User %r>' % self.username
 
-
-# --- 3. INTEGRAÇÃO COM O SHELL PYTHON 
-# Carrega o contexto do banco de dados automaticamente ao usar 'flask shell'[cite: 9]
+# --- 3. INTEGRAÇÃO COM O SHELL PYTHON ---
 @app.shell_context_processor
 def make_shell_context():
     return dict(db=db, User=User, Role=Role)
 
-
-
-
+# --- 4. FORMULÁRIOS ---
 class HomeForm(FlaskForm):
     nome = StringField('What is your name?', validators=[DataRequired()])
-    # Novo campo SelectField para escolher a função
     role = SelectField('Role?:', 
                        choices=[('Administrator', 'Administrator'), 
                                 ('Moderator', 'Moderator'), 
                                 ('User', 'User')])
     submit = SubmitField('Submit')
 
-
-# --- ATUALIZAÇÃO DA ROTA PRINCIPAL ---
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    form = HomeForm()
-    
-    if form.validate_on_submit():
-        # Consulta se o usuário já existe
-        user = User.query.filter_by(username=form.nome.data).first()
-        
-        if user is None: 
-            # 1. Busca no banco a função que o usuário selecionou no formulário
-            user_role = Role.query.filter_by(name=form.role.data).first()
-            
-            # 2. Cria o usuário com a função escolhida
-            user = User(username=form.nome.data, role=user_role)
-            db.session.add(user)
-            db.session.commit()
-            session['known'] = False
-        else:
-            session['known'] = True
-            
-        session['nome'] = form.nome.data
-        return redirect(url_for('index'))
-        
-    # Consultas para as listas
-    lista_usuarios = User.query.all()
-    lista_funcoes = Role.query.all()
-    
-    # Consultas para os contadores usando o método count() do SQLAlchemy
-    total_usuarios = User.query.count()
-    total_funcoes = Role.query.count()
-    
-    return render_template('index.html', 
-                           form=form, 
-                           current_time=datetime.utcnow(), 
-                           known=session.get('known', False),
-                           users=lista_usuarios,
-                           roles=lista_funcoes,
-                           user_count=total_usuarios,
-                           role_count=total_funcoes)
-
 class LoginForm(FlaskForm):
     usuario = StringField('', render_kw={"placeholder": "Usuário ou e-mail"}, validators=[DataRequired()])
     senha = PasswordField('', render_kw={"placeholder": "Informe a sua senha"}, validators=[DataRequired()])
     submit = SubmitField('Enviar')
 
+# --- 5. TRATAMENTO DE ERROS ---
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
@@ -124,19 +70,16 @@ def page_not_found(e):
 def internal_server_error(e):
     return render_template('500.html'), 500
 
+# --- 6. ROTAS (CORRIGIDAS E UNIFICADAS) ---
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    form = HomeForm() # ou NameForm, dependendo de como você nomeou a classe do formulário da Home
+    form = HomeForm()
     
     if form.validate_on_submit():
-        # Consulta no banco de dados se o nome já existe
         user = User.query.filter_by(username=form.nome.data).first()
         
         if user is None: 
-            # 1. Busca a função 'User' no banco de dados
-            user_role = Role.query.filter_by(name='User').first()
-            
-            # 2. Cria o novo usuário já associando-o à função encontrada[cite: 9]
+            user_role = Role.query.filter_by(name=form.role.data).first()
             user = User(username=form.nome.data, role=user_role)
             db.session.add(user)
             db.session.commit()
@@ -147,22 +90,26 @@ def index():
         session['nome'] = form.nome.data
         return redirect(url_for('index'))
         
-    # 3. Consulta TODOS os usuários cadastrados no banco de dados[cite: 9]
+    # Consultas para as listas e contadores
     lista_usuarios = User.query.all()
+    lista_funcoes = Role.query.all()
+    total_usuarios = User.query.count()
+    total_funcoes = Role.query.count()
     
+    # Captura de IP e Host (que estavam na função duplicada)
     ip = request.remote_addr
     host = request.host
     
-    # Enviamos a lista_usuarios para o template
     return render_template('index.html', 
                            form=form, 
-                           ip=ip, 
-                           host=host, 
+                           ip=ip,
+                           host=host,
                            current_time=datetime.utcnow(), 
                            known=session.get('known', False),
-                           users=lista_usuarios)
-        
-   
+                           users=lista_usuarios,
+                           roles=lista_funcoes,
+                           user_count=total_usuarios,
+                           role_count=total_funcoes)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
