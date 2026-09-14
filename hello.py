@@ -61,14 +61,55 @@ def make_shell_context():
 
 
 class HomeForm(FlaskForm):
-    nome = StringField('Informe o seu nome', validators=[DataRequired()])
-   
-    instituicao = StringField('Informe a sua Instituição de ensino:', validators=[DataRequired()])
-    disciplina = SelectField('Informe a sua disciplina:', 
-                             choices=[('DSWA5', 'DSWA5'), 
-                                      ('DWBA4', 'DWBA4'), 
-                                      ('Gestão de projetos', 'Gestão de projetos')])
+    nome = StringField('What is your name?', validators=[DataRequired()])
+    # Novo campo SelectField para escolher a função
+    role = SelectField('Role?:', 
+                       choices=[('Administrator', 'Administrator'), 
+                                ('Moderator', 'Moderator'), 
+                                ('User', 'User')])
     submit = SubmitField('Submit')
+
+
+# --- ATUALIZAÇÃO DA ROTA PRINCIPAL ---
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    form = HomeForm()
+    
+    if form.validate_on_submit():
+        # Consulta se o usuário já existe
+        user = User.query.filter_by(username=form.nome.data).first()
+        
+        if user is None: 
+            # 1. Busca no banco a função que o usuário selecionou no formulário
+            user_role = Role.query.filter_by(name=form.role.data).first()
+            
+            # 2. Cria o usuário com a função escolhida
+            user = User(username=form.nome.data, role=user_role)
+            db.session.add(user)
+            db.session.commit()
+            session['known'] = False
+        else:
+            session['known'] = True
+            
+        session['nome'] = form.nome.data
+        return redirect(url_for('index'))
+        
+    # Consultas para as listas
+    lista_usuarios = User.query.all()
+    lista_funcoes = Role.query.all()
+    
+    # Consultas para os contadores usando o método count() do SQLAlchemy
+    total_usuarios = User.query.count()
+    total_funcoes = Role.query.count()
+    
+    return render_template('index.html', 
+                           form=form, 
+                           current_time=datetime.utcnow(), 
+                           known=session.get('known', False),
+                           users=lista_usuarios,
+                           roles=lista_funcoes,
+                           user_count=total_usuarios,
+                           role_count=total_funcoes)
 
 class LoginForm(FlaskForm):
     usuario = StringField('', render_kw={"placeholder": "Usuário ou e-mail"}, validators=[DataRequired()])

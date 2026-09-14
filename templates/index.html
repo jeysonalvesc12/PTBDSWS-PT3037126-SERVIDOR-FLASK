@@ -30,9 +30,10 @@
 {{ wtf.quick_form(form) }}
 
 <div style="margin-top: 40px;">
+    <!-- PRIMEIRA TABELA: RELAÇÃO DE USUÁRIOS -->
     <h3>Relação de usuários cadastrados</h3>
+    <p>Quantidade: {{ user_count }}</p>
     
-    <!-- Tabela estilizada do Bootstrap -->
     <table class="table table-striped table-hover">
         <thead>
             <tr>
@@ -41,12 +42,43 @@
             </tr>
         </thead>
         <tbody>
-            <!-- Laço de repetição para percorrer todos os usuários do banco -->
             {% for u in users %}
             <tr>
                 <td>{{ u.username }}</td>
-                <!-- Verifica se o usuário tem uma função para evitar erros caso esteja vazio -->
-               <td>{{ u.role.name if u.role else 'User' }}</td>
+                <td>{{ u.role.name if u.role else 'Sem função definida' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div style="margin-top: 40px;">
+    <!-- SEGUNDA TABELA: RELAÇÃO DE FUNÇÕES -->
+    <h3>Relação de funções cadastradas</h3>
+    <p>Quantidade: {{ role_count }}</p>
+    
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Funções</th>
+                <th>Usuários</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in roles %}
+            <tr>
+                <!-- Nome da função -->
+                <td style="vertical-align: top;">{{ r.name }}</td>
+                
+                <!-- Lista numerada de usuários amarrados a esta função -->
+                <td>
+                    <ol style="margin-bottom: 0;">
+                        <!-- O .all() é necessário porque configuramos lazy='dynamic' no modelo[cite: 9] -->
+                        {% for u in r.users.all() %}
+                        <li>{{ u.username }}</li>
+                        {% endfor %}
+                    </ol>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
