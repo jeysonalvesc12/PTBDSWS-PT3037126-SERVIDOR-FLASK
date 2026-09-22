@@ -1,4 +1,6 @@
 import os
+import requests
+from dotenv import load_dotenv
 from flask import Flask, render_template, request, session, redirect, url_for, flash
 from flask_bootstrap import Bootstrap
 from flask_moment import Moment
@@ -9,21 +11,67 @@ from wtforms.validators import DataRequired
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
+# Carrega as variáveis de ambiente do ficheiro .env
+load_dotenv()
+
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'Chave forte'
 
-# --- 1. CONFIGURAÇÃO DO BANCO DE DADOS ---
+# --- 1. CONFIGURAÇÃO DO BANCO DE DADOS E SENDGRID ---
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'data.sqlite')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Carrega as chaves da API de e-mail a partir do .env
+app.config['API_KEY'] = os.environ.get('API_KEY')
+app.config['API_URL'] = os.environ.get('API_URL')
+app.config['API_FROM'] = os.environ.get('API_FROM')
+app.config['FLASKY_ADMIN'] = os.environ.get('FLASKY_ADMIN')
+app.config['PROF_EMAIL'] = os.environ.get('PROF_EMAIL')
 
 bootstrap = Bootstrap(app)
 moment = Moment(app)
 db = SQLAlchemy(app) 
 migrate = Migrate(app, db) 
 
-# --- 2. DEFINIÇÃO DOS MODELOS DE DADOS ---
+# --- 2. FUNÇÃO DE ENVIO DE E-MAIL (SENDGRID) ---
+def send_simple_message(to_emails, novo_utilizador):
+    headers = {
+        "Authorization": f"Bearer {app.config['API_KEY']}",
+        "Content-Type": "application/json"
+    }
+    
+    texto_mensagem = f"""
+    Novo utilizador cadastrado: {novo_utilizador}
+    
+    Dados do Aluno:
+    Nome: Jason Alves
+    Prontuário: PT3037126
+    """
+    
+    personalizations = [{"to": [{"email": email}]} for email in to_emails]
+    
+    data = {
+        "personalizations": personalizations,
+        "from": {"email": app.config['API_FROM']},
+        "subject": "Novo Utilizador Cadastrado",
+        "content": [
+            {
+                "type": "text/plain",
+                "value": texto_mensagem
+            }
+        ]
+    }
+    
+    try:
+        resposta = requests.post(app.config['API_URL'], headers=headers, json=data)
+        return resposta
+    except Exception as e:
+        print(f"Erro ao enviar e-mail: {e}")
+        return None
+
+# --- 3. DEFINIÇÃO DOS MODELOS DE DADOS ---
 class Role(db.Model):
     __tablename__ = 'roles'
     id = db.Column(db.Integer, primary_key=True)
@@ -42,12 +90,12 @@ class User(db.Model):
     def __repr__(self):
         return '<User %r>' % self.username
 
-# --- 3. INTEGRAÇÃO COM O SHELL PYTHON ---
+# --- 4. INTEGRAÇÃO COM O SHELL PYTHON ---
 @app.shell_context_processor
 def make_shell_context():
     return dict(db=db, User=User, Role=Role)
 
-# --- 4. FORMULÁRIOS ---
+# --- 5. FORMULÁRIOS ---
 class HomeForm(FlaskForm):
     nome = StringField('What is your name?', validators=[DataRequired()])
     role = SelectField('Role?:', 
@@ -61,7 +109,7 @@ class LoginForm(FlaskForm):
     senha = PasswordField('', render_kw={"placeholder": "Informe a sua senha"}, validators=[DataRequired()])
     submit = SubmitField('Enviar')
 
-# --- 5. TRATAMENTO DE ERROS ---
+# --- 6. TRATAMENTO DE ERROS ---
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
@@ -70,7 +118,7 @@ def page_not_found(e):
 def internal_server_error(e):
     return render_template('500.html'), 500
 
-# --- 6. ROTAS (CORRIGIDAS E UNIFICADAS) ---
+# --- 7. ROTAS ---
 @app.route('/', methods=['GET', 'POST'])
 def index():
     form = HomeForm()
@@ -84,6 +132,12 @@ def index():
             db.session.add(user)
             db.session.commit()
             session['known'] = False
+            
+            # --- DISPARO DE E-MAIL APÓS GRAVAR NO BANCO ---
+            if app.config['FLASKY_ADMIN'] and app.config['PROF_EMAIL']:
+                destinatarios = [app.config['FLASKY_ADMIN'], app.config['PROF_EMAIL']]
+                send_simple_message(destinatarios, form.nome.data)
+                
         else:
             session['known'] = True
             
@@ -96,7 +150,7 @@ def index():
     total_usuarios = User.query.count()
     total_funcoes = Role.query.count()
     
-    # Captura de IP e Host (que estavam na função duplicada)
+    # Captura de IP e Host
     ip = request.remote_addr
     host = request.host
     
