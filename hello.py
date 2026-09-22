@@ -12,9 +12,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
 # Carrega as variáveis de ambiente do ficheiro .env
-load_dotenv()
-
 basedir = os.path.abspath(os.path.dirname(__file__))
+load_dotenv(os.path.join(basedir, '.env'))
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'Chave forte'
