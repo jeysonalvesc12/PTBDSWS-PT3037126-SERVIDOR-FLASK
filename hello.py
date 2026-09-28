@@ -6,7 +6,7 @@ from flask_bootstrap import Bootstrap
 from flask_moment import Moment
 from datetime import datetime
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, SelectField, PasswordField
+from wtforms import StringField, SubmitField, SelectField, PasswordField, BooleanField
 from wtforms.validators import DataRequired
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -101,6 +101,8 @@ class HomeForm(FlaskForm):
                        choices=[('Administrator', 'Administrator'), 
                                 ('Moderator', 'Moderator'), 
                                 ('User', 'User')])
+    # Adicionado o campo de seleção (checkbox)
+    enviar_email_prof = BooleanField('Enviar e-mail para flaskaulasweb@zohomail.com')
     submit = SubmitField('Submit')
 
 class LoginForm(FlaskForm):
@@ -132,9 +134,15 @@ def index():
             db.session.commit()
             session['known'] = False
             
-            # --- DISPARO DE E-MAIL APÓS GRAVAR NO BANCO ---
-            if app.config['FLASKY_ADMIN'] and app.config['PROF_EMAIL']:
-                destinatarios = [app.config['FLASKY_ADMIN'], app.config['PROF_EMAIL']]
+            # --- NOVA LÓGICA DE DESTINATÁRIOS ---
+            if app.config['FLASKY_ADMIN']:
+                # Envia sempre para o aluno
+                destinatarios = [app.config['FLASKY_ADMIN']]
+                
+                # Se a caixa for selecionada, adiciona o e-mail do professor
+                if form.enviar_email_prof.data and app.config['PROF_EMAIL']:
+                    destinatarios.append(app.config['PROF_EMAIL'])
+                    
                 send_simple_message(destinatarios, form.nome.data)
                 
         else:
