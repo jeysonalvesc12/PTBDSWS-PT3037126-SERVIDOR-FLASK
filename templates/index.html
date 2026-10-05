@@ -6,22 +6,25 @@
     {% if session.get('nome') %}
        <h1>Olá, {{ session.get('nome') }}!</h1>
         
-        <!-- Bloco que lê o banco de dados: Novo usuário vs Usuário recorrente -->
-        {% if not known %}
-            <p style="font-size: 1.2em; color: #555;">Pleased to meet you!</p>
-        {% else %}
-            <p style="font-size: 1.2em; color: #555;">Happy to see you again!</p>
-        {% endif %}
+       <!-- Bloco que lê o banco de dados: Novo usuário vs Usuário recorrente -->
+       {% if not known %}
+           <p style="font-size: 1.2em; color: #555;">Pleased to meet you!</p>
+       {% else %}
+           <p style="font-size: 1.2em; color: #555;">Happy to see you again!</p>
+       {% endif %}
         
        
     {% else %}
-        <h1>Olá, Visitante!</h1>
+       <h1>Olá, Visitante!</h1>
     {% endif %}
 </div>
 
 <div style="margin-bottom: 20px;">
     <p style="font-size: 1.2em; color: #333; margin-bottom: 2px;">O IP do computador remoto é: {{ ip }}</p>
     <p style="font-size: 1.2em; color: #333;">O host da aplicação é: {{ host }}</p>
+    
+    <!-- BOTÃO ADICIONADO PARA VER O HISTÓRICO DE E-MAILS -->
+    <a href="{{ url_for('emails_enviados') }}" class="btn btn-primary" style="margin-top: 15px;">Ver Histórico de E-mails</a>
 </div>
 <hr>
 
@@ -72,7 +75,7 @@
                 <!-- Lista numerada de usuários amarrados a esta função -->
                 <td>
                     <ol style="margin-bottom: 0;">
-                        <!-- O .all() é necessário porque configuramos lazy='dynamic' no modelo[cite: 9] -->
+                        <!-- O .all() é necessário porque configuramos lazy='dynamic' no modelo -->
                         {% for u in r.users.all() %}
                         <li>{{ u.username }}</li>
                         {% endfor %}
