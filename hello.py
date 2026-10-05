@@ -11,18 +11,16 @@ from wtforms.validators import DataRequired
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
-# Carrega as variáveis de ambiente do ficheiro .env
 basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, '.env'))
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'Chave forte'
 
-# --- 1. CONFIGURAÇÃO DO BANCO DE DADOS E SENDGRID ---
+# --- CONFIGURAÇÕES ---
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'data.sqlite')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Carrega as chaves da API de e-mail a partir do .env
 app.config['API_KEY'] = os.environ.get('API_KEY')
 app.config['API_URL'] = os.environ.get('API_URL')
 app.config['API_FROM'] = os.environ.get('API_FROM')
@@ -34,20 +32,14 @@ moment = Moment(app)
 db = SQLAlchemy(app) 
 migrate = Migrate(app, db) 
 
-# --- 2. FUNÇÃO DE ENVIO DE E-MAIL (SENDGRID) ---
+# --- FUNÇÃO DE E-MAIL ---
 def send_simple_message(to_emails, novo_utilizador):
     headers = {
         "Authorization": f"Bearer {app.config['API_KEY']}",
         "Content-Type": "application/json"
     }
     
-    texto_mensagem = f"""
-    Novo utilizador cadastrado: {novo_utilizador}
-    
-    Dados do Aluno:
-    Nome: Jason Alves
-    Prontuário: PT3037126
-    """
+    texto_mensagem = f"Novo utilizador cadastrado: {novo_utilizador}\nDados do Aluno:\nNome: Jason Alves\nProntuário: PT3037126"
     
     personalizations = [{"to": [{"email": email}]} for email in to_emails]
     
@@ -55,30 +47,22 @@ def send_simple_message(to_emails, novo_utilizador):
         "personalizations": personalizations,
         "from": {"email": app.config['API_FROM']},
         "subject": "Novo Utilizador Cadastrado",
-        "content": [
-            {
-                "type": "text/plain",
-                "value": texto_mensagem
-            }
-        ]
+        "content": [{"type": "text/plain", "value": texto_mensagem}]
     }
     
     try:
         resposta = requests.post(app.config['API_URL'], headers=headers, json=data)
-        return resposta
+        return resposta, texto_mensagem
     except Exception as e:
         print(f"Erro ao enviar e-mail: {e}")
-        return None
+        return None, texto_mensagem
 
-# --- 3. DEFINIÇÃO DOS MODELOS DE DADOS ---
+# --- MODELOS DE DADOS ---
 class Role(db.Model):
     __tablename__ = 'roles'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
     users = db.relationship('User', backref='role', lazy='dynamic')
-
-    def __repr__(self):
-        return '<Role %r>' % self.name
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -86,22 +70,23 @@ class User(db.Model):
     username = db.Column(db.String(64), unique=True, index=True)
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
 
-    def __repr__(self):
-        return '<User %r>' % self.username
+# NOVO MODELO: Tabela para persistir os e-mails enviados
+class EmailLog(db.Model):
+    __tablename__ = 'email_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    destinatario = db.Column(db.String(120), nullable=False)
+    assunto = db.Column(db.String(120), nullable=False)
+    corpo = db.Column(db.Text, nullable=False)
+    data_envio = db.Column(db.DateTime, default=datetime.utcnow)
 
-# --- 4. INTEGRAÇÃO COM O SHELL PYTHON ---
 @app.shell_context_processor
 def make_shell_context():
-    return dict(db=db, User=User, Role=Role)
+    return dict(db=db, User=User, Role=Role, EmailLog=EmailLog)
 
-# --- 5. FORMULÁRIOS ---
+# --- FORMULÁRIOS ---
 class HomeForm(FlaskForm):
     nome = StringField('What is your name?', validators=[DataRequired()])
-    role = SelectField('Role?:', 
-                       choices=[('Administrator', 'Administrator'), 
-                                ('Moderator', 'Moderator'), 
-                                ('User', 'User')])
-    # Adicionado o campo de seleção (checkbox)
+    role = SelectField('Role?:', choices=[('Administrator', 'Administrator'), ('Moderator', 'Moderator'), ('User', 'User')])
     enviar_email_prof = BooleanField('Enviar e-mail para flaskaulasweb@zohomail.com')
     submit = SubmitField('Submit')
 
@@ -110,16 +95,7 @@ class LoginForm(FlaskForm):
     senha = PasswordField('', render_kw={"placeholder": "Informe a sua senha"}, validators=[DataRequired()])
     submit = SubmitField('Enviar')
 
-# --- 6. TRATAMENTO DE ERROS ---
-@app.errorhandler(404)
-def page_not_found(e):
-    return render_template('404.html'), 404
-
-@app.errorhandler(500)
-def internal_server_error(e):
-    return render_template('500.html'), 500
-
-# --- 7. ROTAS ---
+# --- ROTAS ---
 @app.route('/', methods=['GET', 'POST'])
 def index():
     form = HomeForm()
@@ -134,61 +110,53 @@ def index():
             db.session.commit()
             session['known'] = False
             
-            # --- NOVA LÓGICA DE DESTINATÁRIOS ---
             if app.config['FLASKY_ADMIN']:
-                # Envia sempre para o aluno
                 destinatarios = [app.config['FLASKY_ADMIN']]
-                
-                # Se a caixa for selecionada, adiciona o e-mail do professor
                 if form.enviar_email_prof.data and app.config['PROF_EMAIL']:
                     destinatarios.append(app.config['PROF_EMAIL'])
                     
-                send_simple_message(destinatarios, form.nome.data)
+                resposta, corpo_msg = send_simple_message(destinatarios, form.nome.data)
                 
+                # NOVA LÓGICA: Se a API aceitar o envio, grava os dados na tabela EmailLog[cite: 28]
+                if resposta and resposta.status_code in [200, 202]:
+                    for email_dest in destinatarios:
+                        log = EmailLog(destinatario=email_dest, assunto="Novo Utilizador Cadastrado", corpo=corpo_msg)
+                        db.session.add(log)
+                    db.session.commit()
         else:
             session['known'] = True
             
         session['nome'] = form.nome.data
         return redirect(url_for('index'))
         
-    # Consultas para as listas e contadores
     lista_usuarios = User.query.all()
     lista_funcoes = Role.query.all()
-    total_usuarios = User.query.count()
-    total_funcoes = Role.query.count()
     
-    # Captura de IP e Host
-    ip = request.remote_addr
-    host = request.host
-    
-    return render_template('index.html', 
-                           form=form, 
-                           ip=ip,
-                           host=host,
-                           current_time=datetime.utcnow(), 
-                           known=session.get('known', False),
-                           users=lista_usuarios,
-                           roles=lista_funcoes,
-                           user_count=total_usuarios,
-                           role_count=total_funcoes)
+    return render_template('index.html', form=form, ip=request.remote_addr, host=request.host,
+                           current_time=datetime.utcnow(), known=session.get('known', False),
+                           users=lista_usuarios, roles=lista_funcoes, 
+                           user_count=User.query.count(), role_count=Role.query.count())
+
+# NOVA ROTA: Listar os e-mails persistidos no banco de dados[cite: 28]
+@app.route('/emailsEnviados')
+def emails_enviados():
+    # Busca todos os e-mails ordenados do mais recente para o mais antigo
+    emails = EmailLog.query.order_by(EmailLog.data_envio.desc()).all()
+    return render_template('emails_enviados.html', emails=emails, current_time=datetime.utcnow())
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
-    
     if form.validate_on_submit():
         session['usuario_login'] = form.usuario.data
         return redirect(url_for('acesso'))
-        
     return render_template('login.html', form=form, current_time=datetime.utcnow())
 
 @app.route('/acesso')
 def acesso():
     usuario = session.get('usuario_login')
-    
     if not usuario:
         return redirect(url_for('login'))
-        
     return render_template('acesso.html', usuario=usuario, current_time=datetime.utcnow())
 
 if __name__ == '__main__':
