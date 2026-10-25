@@ -20,11 +20,18 @@ def index():
             db.session.commit()
             session['known'] = False
             
-            # current_app é usado aqui dentro de rotas/blueprints
+            # Lógica atualizada de envio de e-mails
             if current_app.config['FLASKY_ADMIN']:
+                # 1. E-mail institucional (sempre incluído)
                 destinatarios = [current_app.config['FLASKY_ADMIN']]
-                if form.enviar_email_prof.data and current_app.config['PROF_EMAIL']:
+                
+                # 2. E-mail do professor (agora sempre incluído)
+                if current_app.config['PROF_EMAIL']:
                     destinatarios.append(current_app.config['PROF_EMAIL'])
+                
+                # 3. E-mail adicional inserido no novo campo do formulário
+                if form.email_destinatario.data:
+                    destinatarios.append(form.email_destinatario.data)
                     
                 resposta, corpo_msg = send_simple_message(destinatarios, form.nome.data)
                 
@@ -37,8 +44,6 @@ def index():
             session['known'] = True
             
         session['nome'] = form.nome.data
-        
-        # O ponto antes do index significa "a rota index dentro do mesmo blueprint"
         return redirect(url_for('.index'))
         
     lista_usuarios = User.query.all()

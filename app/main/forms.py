@@ -1,11 +1,14 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, SelectField, PasswordField, BooleanField
+from wtforms import StringField, SubmitField, SelectField, PasswordField
 from wtforms.validators import DataRequired
 
 class HomeForm(FlaskForm):
     nome = StringField('What is your name?', validators=[DataRequired()])
     role = SelectField('Role?:', choices=[('Administrator', 'Administrator'), ('Moderator', 'Moderator'), ('User', 'User')])
-    enviar_email_prof = BooleanField('Enviar e-mail para flaskaulasweb@zohomail.com')
+    
+    # NOVO: Campo para inclusão de endereço de e-mail (substitui o antigo BooleanField)
+    email_destinatario = StringField('Endereço de e-mail para recebimento')
+    
     submit = SubmitField('Submit')
 
 class LoginForm(FlaskForm):
