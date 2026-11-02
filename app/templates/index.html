@@ -36,18 +36,26 @@
     <h3>Relação de usuários cadastrados</h3>
     <p>Quantidade: {{ user_count }}</p>
     
-    <table class="table table-striped table-hover">
+   <table class="table table-striped table-hover">
         <thead>
             <tr>
                 <th>Nome do usuário</th>
                 <th>Função</th>
+                <th>Ações</th> <!-- NOVA COLUNA -->
             </tr>
         </thead>
         <tbody>
             {% for u in users %}
             <tr>
-                <td>{{ u.username }}</td>
-                <td>{{ u.role.name if u.role else 'Sem função definida' }}</td>
+                <td style="vertical-align: middle;">{{ u.username }}</td>
+                <td style="vertical-align: middle;">{{ u.role.name if u.role else 'Sem função definida' }}</td>
+                <td>
+                    <!-- BOTÕES DE EDITAR E EXCLUIR -->
+                    <a href="{{ url_for('main.editar_usuario', id=u.id) }}" class="btn btn-warning btn-sm">Editar</a>
+                    <form action="{{ url_for('main.excluir_usuario', id=u.id) }}" method="POST" style="display:inline;">
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Tem certeza que deseja excluir este utilizador?');">Excluir</button>
+                    </form>
+                </td>
             </tr>
             {% endfor %}
         </tbody>

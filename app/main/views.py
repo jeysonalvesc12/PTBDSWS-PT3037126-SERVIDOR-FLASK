@@ -5,6 +5,7 @@ from .forms import HomeForm, LoginForm
 from .. import db
 from ..models import User, Role, EmailLog
 from ..email import send_simple_message
+from .forms import HomeForm, LoginForm, EditarUsuarioForm
 
 @main.route('/', methods=['GET', 'POST'])
 def index():
@@ -73,3 +74,30 @@ def acesso():
     if not usuario:
         return redirect(url_for('.login'))
     return render_template('acesso.html', usuario=usuario, current_time=datetime.utcnow())
+
+@main.route('/editar/<int:id>', methods=['GET', 'POST'])
+def editar_usuario(id):
+    user = User.query.get_or_404(id)
+    form = EditarUsuarioForm()
+    
+    if form.validate_on_submit():
+        user.username = form.nome.data
+        user_role = Role.query.filter_by(name=form.role.data).first()
+        user.role = user_role
+        db.session.commit()
+        return redirect(url_for('.index'))
+    
+    # Preenche o formulário com os dados atuais ao carregar a página
+    elif request.method == 'GET':
+        form.nome.data = user.username
+        if user.role:
+            form.role.data = user.role.name
+            
+    return render_template('editar_usuario.html', form=form, user=user)
+
+@main.route('/excluir/<int:id>', methods=['POST'])
+def excluir_usuario(id):
+    user = User.query.get_or_404(id)
+    db.session.delete(user)
+    db.session.commit()
+    return redirect(url_for('.index'))
