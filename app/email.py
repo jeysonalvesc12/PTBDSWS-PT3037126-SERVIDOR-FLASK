@@ -1,26 +1,39 @@
 import requests
-from flask import current_app
+from flask import current_app, render_template
 
-def send_simple_message(to_emails, novo_utilizador):
-    headers = {
-        "Authorization": f"Bearer {current_app.config['API_KEY']}",
-        "Content-Type": "application/json"
-    }
+# 1. NOVA FUNÇÃO: Exigida pelo módulo de Autenticação da Aula 090
+def send_email(to, subject, template, **kwargs):
+    app = current_app._get_current_object()
     
-    texto_mensagem = f"Novo utilizador cadastrado: {novo_utilizador}\nDados do Aluno:\nNome: Jason Alves\nProntuário: PT3037126"
+    # O módulo auth passa um template HTML específico (ex: 'auth/email/confirm')
+    html_body = render_template(template + '.html', **kwargs)
     
-    personalizations = [{"to": [{"email": email}]} for email in to_emails]
+    resposta = requests.post(
+        app.config['API_URL'],
+        auth=("api", app.config['API_KEY']),
+        data={
+            "from": app.config['API_FROM'],
+            "to": to,
+            "subject": app.config.get('FLASKY_MAIL_SUBJECT_PREFIX', '[Aplicação]') + ' ' + subject,
+            "html": html_body
+        }
+    )
+    return resposta
+
+# 2. FUNÇÃO ANTIGA: Mantida para não quebrar a rota index do main
+def send_simple_message(to_list, nome):
+    app = current_app._get_current_object()
     
-    data = {
-        "personalizations": personalizations,
-        "from": {"email": current_app.config['API_FROM']},
-        "subject": "Novo Utilizador Cadastrado",
-        "content": [{"type": "text/plain", "value": texto_mensagem}]
-    }
+    html_body = f"<p>Novo utilizador cadastrado: {nome}</p>"
     
-    try:
-        resposta = requests.post(current_app.config['API_URL'], headers=headers, json=data)
-        return resposta, texto_mensagem
-    except Exception as e:
-        print(f"Erro ao enviar e-mail: {e}")
-        return None, texto_mensagem
+    resposta = requests.post(
+        app.config['API_URL'],
+        auth=("api", app.config['API_KEY']),
+        data={
+            "from": app.config['API_FROM'],
+            "to": to_list,
+            "subject": app.config.get('FLASKY_MAIL_SUBJECT_PREFIX', '[Aplicação]') + " Novo Cadastro",
+            "html": html_body
+        }
+    )
+    return resposta, html_body
