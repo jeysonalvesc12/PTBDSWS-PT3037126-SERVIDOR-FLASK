@@ -1,6 +1,6 @@
 {% extends "bootstrap/base.html" %}
 
-{% block title %}Avaliação contínua: Aula 050.B{% endblock %}
+{% block title %}Avaliação contínua{% endblock %}
 
 {% block head %}
 {{ super() }}
@@ -17,7 +17,14 @@
         <div class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
                 <li><a href="{{ url_for('main.index') }}">Home</a></li>
-                <li><a href="{{ url_for('main.login') }}">Login</a></li>
+                <ul class="nav navbar-nav navbar-right">
+                    {% if current_user.is_authenticated %}
+                    <li><a href="#">Olá, {{ current_user.username }}!</a></li>
+                    <li><a href="{{ url_for('auth.logout') }}">Sair</a></li>
+                    {% else %}
+                    <li><a href="{{ url_for('auth.login') }}">Entrar</a></li>
+                    {% endif %}
+                </ul>
             </ul>
         </div>
     </div>
