@@ -11,7 +11,8 @@ from flask_migrate import Migrate
 from app import create_app, db
 from app.models import User, Role, EmailLog
 
-app = create_app(os.getenv('FLASK_CONFIG') or 'default')
+# CORREÇÃO AQUI: Chama create_app() sem argumentos para respeitar o seu __init__.py
+app = create_app()
 migrate = Migrate(app, db)
 
 @app.shell_context_processor
